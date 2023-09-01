@@ -1,4 +1,4 @@
-import dataclasses
+from dataclasses import dataclass
 from typing import List
 
 """
@@ -16,14 +16,14 @@ for example:
 """
 
 
-@dataclasses
+@dataclass
 class Comment:
     comment_body: str
     comment_url: str
     comment_id: str
 
 
-@dataclasses
+@dataclass
 class Content:
     thread_url: str
     thread_title: str
