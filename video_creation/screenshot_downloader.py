@@ -31,6 +31,8 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
     lang: Final[str] = settings.config["reddit"]["thread"]["post_lang"]
     storymode: Final[bool] = settings.config["settings"]["storymode"]
 
+    dimensions = [(0, 0)]  # 첫번 째 요소는 title 이라서 영향을 주면 안됨
+
     print_step("Downloading screenshots of reddit posts...")
     reddit_id = re.sub(r"[^\w\s-]", "", reddit_object["thread_id"])
     # ! Make sure the reddit screenshots folder exists
@@ -38,7 +40,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
 
     # set the theme and disable non-essential cookies
     if settings.config["settings"]["theme"] == "dark":
-        cookie_file = open("./video_creation/data/cookie-dark-mode.json", encoding="utf-8")
+        cookie_file = open(
+            "./video_creation/data/cookie-dark-mode.json", encoding="utf-8"
+        )
         bgcolor = (33, 33, 36, 255)
         txtcolor = (240, 240, 240)
         transparent = False
@@ -48,15 +52,21 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
             bgcolor = (0, 0, 0, 0)
             txtcolor = (255, 255, 255)
             transparent = True
-            cookie_file = open("./video_creation/data/cookie-dark-mode.json", encoding="utf-8")
+            cookie_file = open(
+                "./video_creation/data/cookie-dark-mode.json", encoding="utf-8"
+            )
         else:
             # Switch to dark theme
-            cookie_file = open("./video_creation/data/cookie-dark-mode.json", encoding="utf-8")
+            cookie_file = open(
+                "./video_creation/data/cookie-dark-mode.json", encoding="utf-8"
+            )
             bgcolor = (33, 33, 36, 255)
             txtcolor = (240, 240, 240)
             transparent = False
     else:
-        cookie_file = open("./video_creation/data/cookie-light-mode.json", encoding="utf-8")
+        cookie_file = open(
+            "./video_creation/data/cookie-light-mode.json", encoding="utf-8"
+        )
         bgcolor = (255, 255, 255, 255)
         txtcolor = (0, 0, 0)
         transparent = False
@@ -100,8 +110,12 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         page.set_viewport_size(ViewportSize(width=1920, height=1080))
         page.wait_for_load_state()
 
-        page.locator('[name="username"]').fill(settings.config["reddit"]["creds"]["username"])
-        page.locator('[name="password"]').fill(settings.config["reddit"]["creds"]["password"])
+        page.locator('[name="username"]').fill(
+            settings.config["reddit"]["creds"]["username"]
+        )
+        page.locator('[name="password"]').fill(
+            settings.config["reddit"]["creds"]["password"]
+        )
         page.locator("button[class$='m-full-width']").click()
         page.wait_for_timeout(5000)
 
@@ -180,9 +194,16 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                 location = page.locator('[data-test-id="post-content"]').bounding_box()
                 for i in location:
                     location[i] = float("{:.2f}".format(location[i] * zoom))
+                    dimension = page.evaluate(
+                        "element => {const { width, height } = element.getBoundingClientRect();return { width, height };}",
+                        location,
+                    )
+                    dimensions.append((dimension["width"], dimension["height"]))
                 page.screenshot(clip=location, path=postcontentpath)
             else:
-                page.locator('[data-test-id="post-content"]').screenshot(path=postcontentpath)
+                page.locator('[data-test-id="post-content"]').screenshot(
+                    path=postcontentpath
+                )
         except Exception as e:
             print_substep("Something went wrong!", style="red")
             resp = input(
@@ -196,7 +217,9 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                     "green",
                 )
 
-            resp = input("Do you want the error traceback for debugging purposes? (y/n)")
+            resp = input(
+                "Do you want the error traceback for debugging purposes? (y/n)"
+            )
             if not resp.casefold().startswith("y"):
                 exit()
 
@@ -241,19 +264,34 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
                         # zoom the body of the page
                         page.evaluate("document.body.style.zoom=" + str(zoom))
                         # scroll comment into view
-                        page.locator(f"#t1_{comment['comment_id']}").scroll_into_view_if_needed()
+                        page.locator(
+                            f"#t1_{comment['comment_id']}"
+                        ).scroll_into_view_if_needed()
                         # as zooming the body doesn't change the properties of the divs, we need to adjust for the zoom
-                        location = page.locator(f"#t1_{comment['comment_id']}").bounding_box()
+                        location = page.locator(
+                            f"#t1_{comment['comment_id']}"
+                        ).bounding_box()
                         for i in location:
                             location[i] = float("{:.2f}".format(location[i] * zoom))
                         page.screenshot(
                             clip=location,
                             path=f"assets/temp/{reddit_id}/png/comment_{idx}.png",
                         )
+                        dimension = page.evaluate(
+                            "element => {const { width, height } = element.getBoundingClientRect();return { width, height };}",
+                            location,
+                        )
+                        dimensions.append((dimension["width"], dimension["height"]))
                     else:
-                        page.locator(f"#t1_{comment['comment_id']}").screenshot(
+                        location = page.locator(f"#t1_{comment['comment_id']}")
+                        location.screenshot(
                             path=f"assets/temp/{reddit_id}/png/comment_{idx}.png"
                         )
+                        dimension = page.evaluate(
+                            "element => {const { width, height } = element.getBoundingClientRect();return { width, height };}",
+                            location.element_handle(),
+                        )
+                        dimensions.append((dimension["width"], dimension["height"]))
                 except TimeoutError:
                     del reddit_object["comments"]
                     screenshot_num += 1
@@ -263,4 +301,5 @@ def get_screenshots_of_reddit_posts(reddit_object: dict, screenshot_num: int):
         # close browser instance when we are done using it
         browser.close()
 
-    print_substep("Screenshots downloaded Successfully.", style="bold green")
+    print_substep("Screenshots downloaded Successfully !", style="bold green")
+    return dimensions

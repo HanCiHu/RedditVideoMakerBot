@@ -2,7 +2,7 @@ import multiprocessing
 import os
 import re
 from os.path import exists  # Needs to be imported specifically
-from typing import Final
+from typing import Final, List
 from typing import Tuple, Any, Dict
 
 import ffmpeg
@@ -136,6 +136,7 @@ def make_final_video(
     length: int,
     reddit_obj: dict,
     background_config: Dict[str, Tuple],
+    screenshots_dimentions: List[Tuple[int, int]],
 ):
     """Gathers audio clips, gathers all screenshots, stitches them together and saves the final video to assets/temp
     Args:
@@ -147,6 +148,8 @@ def make_final_video(
     # settings values
     W: Final[int] = int(settings.config["settings"]["resolution_w"])
     H: Final[int] = int(settings.config["settings"]["resolution_h"])
+
+    print(screenshots_dimentions)
 
     opacity = settings.config["settings"]["opacity"]
 
@@ -284,6 +287,8 @@ def make_final_video(
     # 위치는 영상 가운데 고정
     else:
         total_length = sum(audio_clips_durations)
+        total_height = 100
+        print(screenshots_dimentions)
         for i in range(0, number_of_clips + 1):
             image_clips.append(
                 ffmpeg.input(f"assets/temp/{reddit_id}/png/comment_{i}.png")[
@@ -300,10 +305,10 @@ def make_final_video(
                 image_overlay,
                 enable=enable,
                 x="(main_w-overlay_w)/2",
-                # y="(main_h-overlay_h)/2,
-                y=f"{i * 100}",
+                y=f"{total_height}",
             )
             current_time += audio_clips_durations[i]
+            total_height += screenshots_dimentions[i][1]
 
     title = re.sub(r"[^\w\s-]", "", reddit_obj["thread_title"])
     idx = re.sub(r"[^\w\s-]", "", reddit_obj["thread_id"])
